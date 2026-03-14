@@ -2,7 +2,7 @@
 
 An attempt at recreating the black hole image from the NASA press release.
 
-![Sample output]('./assets/blackhole.png')
+![Sample out](assets/blackhole.png)
 
 ## Usage
 
