@@ -1,50 +1,37 @@
 import * as THREE from "three";
-import vertexShader from "vertexShader";
-import fragmentShader from "fragmentShader";
+import vertexShader from "./vertexShader.js";
+import fragmentShader from "./fragmentShader.js";
 
+const canvas = document.getElementById("glslBlackHoleCanvas");
 const scene = new THREE.Scene();
 
-const width = 5120 / 2;
-const height = 2880 / 2;
+const width = canvas.clientWidth;
+const height = canvas.clientHeight;
 const aspectRatio = width / height;
 
 const camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
 camera.position.z = 1;
 
-const renderer = new THREE.WebGLRenderer({
-  antialias: true,
-});
+const renderer = new THREE.WebGLRenderer({antialias: true, canvas: canvas });
+
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 2.2;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
 renderer.setSize(width, height);
 renderer.setPixelRatio(window.devicePixelRatio);
 
-document.body.appendChild(renderer.domElement);
-
-function degToRad(deg) {
-  return (deg * Math.PI) / 180;
-}
-
-const fovRadians = degToRad(camera.fov);
+const fovRadians = THREE.MathUtils.degToRad(camera.fov);
 const yFov = camera.position.z * Math.tan(fovRadians / 2) * 2;
 
 const canvasGeometry = new THREE.PlaneGeometry(yFov * camera.aspect, yFov);
-
 const canvasMaterial = new THREE.ShaderMaterial({
   uniforms: {
-    uResolution: {
-      value: new THREE.Vector2(width, height),
-    },
-    uTime: {
-      value: 0,
-    },
-    uCamPos: {
-      value: new THREE.Vector3(0, 0, -10),
-    },
-    uBlackHolePos: {
-      value: new THREE.Vector3(0, 0, 0),
-    },
-    uRotation: {
-      value: new THREE.Vector3(degToRad(-4), 0, 0),
-    },
+    uResolution:   { value: new THREE.Vector2(width, height)},
+    uTime:         { value: 0,},
+    uCamPos:       { value: new THREE.Vector3(0, 0, -8)},
+    uBlackHolePos: { value: new THREE.Vector3(0, 0, 0)},
+    uRotation:     { value: new THREE.Vector3(THREE.MathUtils.degToRad(-4), 0, THREE.MathUtils.degToRad(-15))},
   },
   vertexShader,
   fragmentShader,
@@ -53,42 +40,20 @@ const canvasMaterial = new THREE.ShaderMaterial({
 const canvasMesh = new THREE.Mesh(canvasGeometry, canvasMaterial);
 scene.add(canvasMesh);
 
-let frames = [];
-let frameTimes = 0;
-const N = 1;
-
-for (let i = 0; i < N; i++) {
-  const startTime = performance.now();
+renderer.setAnimationLoop(time => {
+  canvasMaterial.uniforms.uTime.value = time * 0.001;
   renderer.render(scene, camera);
+});
 
-  canvasMaterial.uniforms.uTime.value = i / 10;
+const downloadButton = document.createElement("button");
+downloadButton.textContent = "Download image";
+document.body.appendChild(downloadButton);
 
-  const data = renderer.domElement.toDataURL("image/png");
-  frames.push(data);
+downloadButton.addEventListener("click", () => {
+  renderer.render(scene, camera); // make sure last frame has been rendered
 
-  const endTime = performance.now();
-  const frameTime = endTime - startTime;
-  frameTimes += frameTime;
-
-  console.log(`Finished rendering frame: ${i} frame time: ${frameTime}ms`);
-}
-
-console.log(`Average frame time: ${frameTimes / N}ms`);
-
-let image = document.createElement("img");
-document.body.appendChild(image);
-
-image.style.width = width + "px";
-image.style.height = height + "px";
-
-let i = 0;
-
-setInterval(() => {
-  const frame = frames[i];
-  image.src = frame;
-  i++;
-
-  if (i === frames.length) {
-    i = 0;
-  }
-}, 50);
+  const link = document.createElement("a");
+  link.download = "blackhole.png";
+  link.href = renderer.domElement.toDataURL("image/png");
+  link.click();
+});

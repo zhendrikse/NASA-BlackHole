@@ -1,8 +1,8 @@
 # NASA-BlackHole
 
-My attempt at recreating the black hole image from the NASA press release.
+An attempt at recreating the black hole image from the NASA press release.
 
-<img src='./assets/test.jpg'></img>
+![Sample output]('./assets/blackhole.png')
 
 ## Usage
 

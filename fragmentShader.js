@@ -12,7 +12,7 @@ export default `
   #define TAU 6.283185307179586476925286766559
 
   float innerDiskRadius = 2.5;
-  float outerDiskRadius = 7.0;
+  float outerDiskRadius = 7.5;
   float diskTwist = 10.0;
   float flowRate = 0.6;
 
@@ -99,7 +99,8 @@ export default `
         float densityVariation = fbm(uvw - 0.5, 5, 2.0, 1.0, 7.0);
         diskDensity *= densityVariation * pow(inversesqrt(dist), 2.0) + 0.5 * fbm(rotate(rayPos, vec3(0, -uTime * inversesqrt(pow(diskDist, 2.0)) * 2.0, 0)), 5, 5.0, 0.1, 0.5); 
 
-        float opticalDepth = STEP_SIZE * 50.0 * diskDensity;
+        float opticalDepth = STEP_SIZE * 100.0 * diskDensity;
+        opticalDepth = pow(opticalDepth, 0.9);
 
         if (dist > innerDiskRadius && dist < outerDiskRadius && rayPos.y * steppedRayPos.y < pow(STEP_SIZE, 3.0)) {
           vec3 shiftVector = 0.6 * cross(normalize(steppedRayPos), vec3(0.0, 1.0, 0.0));
@@ -108,7 +109,32 @@ export default `
           float dopplerShift = sqrt((1.0 - velocity) / (1.0 + velocity)); 
           float gravitationalShift = sqrt((1.0 - 2.0 / dist) / (1.0 - 2.0 / length(uCamPos)));
 
-          return vec4(vec3(1, 0.25, 0) * gravitationalShift * dopplerShift * opticalDepth, 1.0);
+          float brightness = 1.5;
+        
+          float temp = 1.0 - clamp((dist - innerDiskRadius) / (outerDiskRadius - innerDiskRadius), 0.0, 1.0);
+        
+          vec3 innerColor = vec3(2.0, 1.6, 1.1);   // hot while/yellow
+          vec3 midColor   = vec3(1.2, 0.6, 0.15);  // orange
+          vec3 outerColor = vec3(0.8, 0.15, 0.05); // red
+        
+          vec3 diskColor =
+            mix(
+                mix(outerColor, midColor, temp),
+                innerColor,
+                pow(temp, 3.0)
+            );
+            
+            // --- PHOTON RING ---
+            float photonRadius = 1.0; // radius of the ring (near event horizon)
+            float photonThickness = 0.03; // ring thickness
+            
+            float ringDist = abs(dist - photonRadius);
+            float ringIntensity = smoothstep(photonThickness, 0.0, ringDist); // stronger near ring
+            
+            vec3 ringColor = vec3(1.0, 0.9, 0.7); // white/yellowish photon ring            
+            color.rgb += ringColor * ringIntensity;
+            
+          return vec4(diskColor * brightness * gravitationalShift * dopplerShift * opticalDepth, 1.0);
         }
       
         rayPos = steppedRayPos;
